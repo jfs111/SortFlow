@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Validation - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>🔍 Cluster Validation</h2>
+            <p class="text-muted mb-0">
+                {{ project.name }} • {{ clusters|length }} clusters • 
+                Average confidence: {{ "%.1f"|format(project.mean_confidence * 100) }}%
+            </p>
+        </div>
+        <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+            ← Back to Project
+        </a>
+    </div>
+
+    <!-- Navigation between clusters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Select a Cluster</h5>
+            <div class="btn-group flex-wrap" role="group">
+                {% for cluster_id, cluster in clusters.items() %}
+                    <button type="button" 
+                            class="btn btn-outline-primary cluster-nav-btn" 
+                            data-cluster="{{ cluster_id }}"
+                            onclick="showCluster({{ cluster_id }})">
+                        Cluster {{ cluster_id }}
+                        <span class="badge bg-secondary">{{ cluster.n_images }}</span>
+                        {% if cluster.n_uncertain > 0 %}
+                            <span class="badge bg-warning text-dark">{{ cluster.n_uncertain }} ⚠️</span>
+                        {% endif %}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Clusters -->
+    {% for cluster_id, cluster in clusters.items() %}
+    <div class="cluster-container" id="cluster-{{ cluster_id }}" style="display: {% if loop.first %}block{% else %}none{% endif %};">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h4 class="mb-0">Cluster {{ cluster_id }}</h4>
+                        <small>
+                            {{ cluster.n_images }} images • 
+                            Average confidence: {{ "%.1f"|format(cluster.mean_confidence * 100) }}% •
+                            {{ cluster.n_uncertain }} uncertain (< 30%)
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-light btn-sm" onclick="previousCluster()">← Previous</button>
+                        <button class="btn btn-light btn-sm" onclick="nextCluster()">Next →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Selection controls -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="threshold-{{ cluster_id }}" class="form-label">
+                            Confidence threshold: <strong><span id="threshold-value-{{ cluster_id }}">0.50</span></strong>
+                        </label>
+                        <input type="range" 
+                               class="form-range" 
+                               id="threshold-{{ cluster_id }}" 
+                               min="0" 
+                               max="100" 
+                               value="50"
+                               oninput="updateThreshold({{ cluster_id }}, this.value)">
+                        <small class="text-muted">Adjust threshold to automatically select uncertain images</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quick Actions</label>
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-outline-warning" 
+                                    onclick="selectBelowThreshold({{ cluster_id }})">
+                                ⚠️ Select < threshold
+                            </button>
+                            <button class="btn btn-outline-secondary" 
+                                    onclick="selectAll({{ cluster_id }})">
+                                ☑️ Select All
+                            </button>
+                            <button class="btn btn-outline-secondary" 
+                                    onclick="deselectAll({{ cluster_id }})">
+                                ☐ Deselect All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Image grid -->
+                <div class="row g-3" id="images-grid-{{ cluster_id }}">
+                    {% for image in cluster.images %}
+                    <div class="col-6 col-md-3 col-lg-2 image-item" 
+                         data-confidence="{{ image.confidence_score }}"
+                         data-image-id="{{ image.id }}">
+                        <div class="card h-100 image-card" id="card-{{ image.id }}">
+                            <div class="card-img-wrapper position-relative">
+                                <img src="/{{ image.file_path }}" 
+                                     class="card-img-top" 
+                                     alt="{{ image.original_filename }}"
+                                     loading="lazy">
+                                <div class="position-absolute top-0 start-0 m-2">
+                                    <input type="checkbox" 
+                                           class="form-check-input image-checkbox" 
+                                           id="check-{{ image.id }}"
+                                           data-image-id="{{ image.id }}"
+                                           data-cluster-id="{{ cluster_id }}"
+                                           onchange="updateSelection({{ cluster_id }})">
+                                </div>
+                                <div class="position-absolute bottom-0 end-0 m-2">
+                                    <span class="badge {% if image.confidence_score < 0.3 %}bg-danger{% elif image.confidence_score < 0.5 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                        {{ "%.0f"|format(image.confidence_score * 100) }}%
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted d-block text-truncate" title="{{ image.original_filename }}">
+                                    {{ image.original_filename }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Selection summary -->
+                <div class="alert alert-info mt-4" id="selection-summary-{{ cluster_id }}">
+                    <strong>Selection:</strong> <span id="selected-count-{{ cluster_id }}">0</span> image(s) selected
+                    <span class="text-muted">(will be marked as rejected)</span>
+                </div>
+
+                <!-- Action buttons -->
+                    <div class="d-flex gap-2 mb-3">
+                        <button class="btn btn-outline-secondary" onclick="previousCluster()">
+                            ← Previous
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="nextCluster()">
+                            Next →
+                        </button>
+                        <button class="btn btn-danger ms-auto" onclick="rejectEntireCluster({{ project.id }}, {{ cluster_id }})">
+                            ❌ Reject ENTIRE Cluster
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="skipCluster()">
+                            Skip Without Validating
+                        </button>
+                        <button class="btn btn-success" onclick="validateCluster({{ project.id }}, {{ cluster_id }})">
+                            ✓ Validate This Cluster
+                        </button>
+                    </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.image-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.image-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.image-card.selected {
+    border: 3px solid #dc3545;
+    background-color: #f8d7da;
+}
+.card-img-wrapper {
+    height: 150px;
+    overflow: hidden;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+}
+.image-checkbox {
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    background: white;
+    border: 2px solid #333;
+}
+.cluster-nav-btn.active {
+    background-color: #0d6efd;
+    color: white;
+}
+</style>
+
+<script>
+let currentCluster = {{ clusters.keys()|list|first }};
+const clusters = {{ clusters.keys()|list|tojson }};
+
+function showCluster(clusterId) {
+    document.querySelectorAll('.cluster-container').forEach(el => el.style.display = 'none');
+    document.getElementById(`cluster-${clusterId}`).style.display = 'block';
+    document.querySelectorAll('.cluster-nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-cluster="${clusterId}"]`).classList.add('active');
+    currentCluster = clusterId;
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function nextCluster() {
+    const currentIndex = clusters.indexOf(currentCluster);
+    if (currentIndex < clusters.length - 1) showCluster(clusters[currentIndex + 1]);
+}
+
+function previousCluster() {
+    const currentIndex = clusters.indexOf(currentCluster);
+    if (currentIndex > 0) showCluster(clusters[currentIndex - 1]);
+}
+
+function skipCluster() {
+    nextCluster();
+}
+
+function updateThreshold(clusterId, value) {
+    const threshold = value / 100;
+    document.getElementById(`threshold-value-${clusterId}`).textContent = threshold.toFixed(2);
+}
+
+function selectBelowThreshold(clusterId) {
+    const threshold = parseFloat(document.getElementById(`threshold-value-${clusterId}`).textContent);
+    const grid = document.getElementById(`images-grid-${clusterId}`);
+    grid.querySelectorAll('.image-item').forEach(item => {
+        const confidence = parseFloat(item.dataset.confidence);
+        item.querySelector('.image-checkbox').checked = confidence < threshold;
+    });
+    updateSelection(clusterId);
+}
+
+function selectAll(clusterId) {
+    document.getElementById(`images-grid-${clusterId}`).querySelectorAll('.image-checkbox').forEach(cb => cb.checked = true);
+    updateSelection(clusterId);
+}
+
+function deselectAll(clusterId) {
+    document.getElementById(`images-grid-${clusterId}`).querySelectorAll('.image-checkbox').forEach(cb => cb.checked = false);
+    updateSelection(clusterId);
+}
+
+function updateSelection(clusterId) {
+    const grid = document.getElementById(`images-grid-${clusterId}`);
+    let selectedCount = 0;
+    grid.querySelectorAll('.image-checkbox').forEach(checkbox => {
+        const card = document.getElementById(`card-${checkbox.dataset.imageId}`);
+        if (checkbox.checked) {
+            card.classList.add('selected');
+            selectedCount++;
+        } else {
+            card.classList.remove('selected');
+        }
+    });
+    document.getElementById(`selected-count-${clusterId}`).textContent = selectedCount;
+}
+
+function validateCluster(projectId, clusterId) {
+    const grid = document.getElementById(`images-grid-${clusterId}`);
+    const rejectedIds = [];
+    const validatedIds = [];
+    
+    grid.querySelectorAll('.image-checkbox').forEach(checkbox => {
+        const imageId = parseInt(checkbox.dataset.imageId);
+        if (checkbox.checked) {
+            rejectedIds.push(imageId);
+        } else {
+            validatedIds.push(imageId);
+        }
+    });
+    
+    if (!confirm(`Cluster ${clusterId} Validation:\n- ${rejectedIds.length} image(s) rejected\n- ${validatedIds.length} image(s) validated\n\nContinue?`)) return;
+    
+    fetch(`/projects/${projectId}/clusters/${clusterId}/validate`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({rejected_ids: rejectedIds, validated_ids: validatedIds})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const currentIndex = clusters.indexOf(clusterId);
+            
+            if (currentIndex === clusters.length - 1) {
+                alert(`✓ Cluster ${clusterId} validated!\n${data.n_rejected} rejected, ${data.n_validated} validated\n\n🎉 ALL CLUSTERS HAVE BEEN VALIDATED!`);
+                window.location.href = `/projects/${projectId}`;
+            } else {
+                alert(`✓ Cluster ${clusterId} validated!\n${data.n_rejected} rejected, ${data.n_validated} validated`);
+                nextCluster();
+            }
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Validation error');
+    });
+}
+
+function rejectEntireCluster(projectId, clusterId) {
+    var cluster = clusters[clusterId];
+    
+    if (!confirm('⚠️ WARNING!\n\nDo you really want to reject ALL ' + cluster.n_images + ' images from Cluster ' + clusterId + '?\n\nThis action is irreversible.')) {
+        return;
+    }
+    
+    var btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Rejecting...';
+    
+    fetch('/projects/' + projectId + '/clusters/' + clusterId + '/reject-all', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            
+            var currentIndex = clusters.indexOf(clusterId);
+            if (currentIndex === clusters.length - 1) {
+                alert('🎉 ALL CLUSTERS HAVE BEEN PROCESSED!\n\nYou will be redirected to the project page.');
+                window.location.href = '/projects/' + projectId;
+            } else {
+                nextCluster();
+            }
+        } else {
+            alert('❌ Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '❌ Reject ENTIRE Cluster';
+        }
+    })
+    .catch(function(err) {
+        console.error('Error:', err);
+        alert('❌ Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '❌ Reject ENTIRE Cluster';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (clusters.length > 0) {
+        document.querySelector(`[data-cluster="${clusters[0]}"]`).classList.add('active');
+    }
+});
+</script>
+{% endblock %}

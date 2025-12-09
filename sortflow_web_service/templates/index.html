@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Home - SortFlow{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="text-align: center;">
+        <h1 style="color: #667eea; font-size: 3rem; margin-bottom: 1rem;">
+            SortFlow
+        </h1>
+        
+        {% if current_user.is_authenticated %}
+            <p style="font-size: 1.5rem; color: #6c757d; margin-bottom: 2rem;">
+                Hello {{ current_user.username or current_user.email }}! 👋
+            </p>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0;">
+                <a href="/projects/new" class="btn btn-secondary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                    ➕ New Project
+                </a>
+            </div>
+        {% else %}
+            <p style="font-size: 1.5rem; color: #6c757d; margin-bottom: 2rem;">
+                Automatically organize your documents with Artificial Intelligence
+            </p>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; margin: 2rem 0;">
+                <a href="/auth/register" class="btn" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                    ✨ Get Started Now
+                </a>
+                <a href="/auth/login" class="btn btn-secondary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                    🔐 Sign In
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <hr style="margin: 3rem 0; border: none; border-top: 1px solid #e0e0e0;">
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+        <div style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">Artificial Intelligence</h3>
+            <p style="color: #6c757d;">Uses ResNet50 to analyze your images and automatically group them</p>
+        </div>
+        
+        <div style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">Fast and Efficient</h3>
+            <p style="color: #6c757d;">Process thousands of images in minutes</p>
+        </div>
+        
+        <div style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">Confidence Scores</h3>
+            <p style="color: #6c757d;">Automatically identifies images requiring validation</p>
+        </div>
+    </div>
+    
+    <hr style="margin: 3rem 0; border: none; border-top: 1px solid #e0e0e0;">
+    
+    <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px;">
+        <h2 style="color: #667eea; margin-bottom: 1rem;">How does it work?</h2>
+        <ol style="color: #495057; line-height: 2; padding-left: 1.5rem;">
+            <li><strong>Create an account</strong> - Free registration in 30 seconds</li>
+            <li><strong>Upload your images</strong> - Up to 10,000 images per project</li>
+            <li><strong>AI does the sorting</strong> - Automatic K-Means clustering analysis</li>
+            <li><strong>Validate results</strong> - Adjust if needed (human-in-the-loop workflow)</li>
+            <li><strong>Export</strong> - Download your images organized by category</li>
+        </ol>
+    </div>
+    
+    <div style="text-align: center; margin-top: 3rem;">
+        {% if not current_user.is_authenticated %}
+            <a href="/auth/register" class="btn" style="font-size: 1.1rem; padding: 1rem 2.5rem;">
+                Try for Free
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div style="margin-top: 2rem; text-align: center; color: white;">
+    <p style="font-size: 0.9rem;">
+        💡 CS50x Final Project - Harvard University
+    </p>
+</div>
+{% endblock %}

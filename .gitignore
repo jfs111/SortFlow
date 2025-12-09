@@ -1,0 +1,439 @@
+# ============================================
+# SortFlow Project - .gitignore
+# ============================================
+
+# ============================================
+# CRITICAL - Environment files with secrets
+# ============================================
+# ALWAYS exclude .env files (contain API keys, secrets, passwords)
+.env
+.env.local
+.env.*.local
+sortflow_web_service/.env
+sortflow_ml_service/.env
+
+# ============================================
+# Python
+# ============================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Scrapy stuff
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ============================================
+# SortFlow Specific - Web Service
+# ============================================
+
+# User uploaded images (IMPORTANT - can be very large)
+sortflow_web_service/uploads/projects/*/
+sortflow_web_service/uploads/projects/**/*
+
+# Keep the directory structure but ignore content
+!sortflow_web_service/uploads/projects/.gitkeep
+
+# SQLite databases (contain user data)
+sortflow_web_service/instance/*.db
+sortflow_web_service/instance/*.sqlite
+sortflow_web_service/instance/*.sqlite3
+
+# Logs
+sortflow_web_service/logs/
+sortflow_web_service/*.log
+
+# ============================================
+# SortFlow Specific - ML Service
+# ============================================
+
+# ML Service data directories
+sortflow_ml_service/data/
+sortflow_ml_service/embeddings/
+sortflow_ml_service/models/
+sortflow_ml_service/temp/
+sortflow_ml_service/visualizations/
+
+# Logs
+sortflow_ml_service/logs/
+sortflow_ml_service/*.log
+
+# ============================================
+# C# / .NET - SortFlowApiTester
+# ============================================
+
+# Build results
+SortFlowApiTester/bin/
+SortFlowApiTester/obj/
+SortFlowApiTester/[Dd]ebug/
+SortFlowApiTester/[Dd]ebugPublic/
+SortFlowApiTester/[Rr]elease/
+SortFlowApiTester/[Rr]eleases/
+SortFlowApiTester/x64/
+SortFlowApiTester/x86/
+SortFlowApiTester/[Ww][Ii][Nn]32/
+SortFlowApiTester/[Aa][Rr][Mm]/
+SortFlowApiTester/[Aa][Rr][Mm]64/
+SortFlowApiTester/bld/
+
+# Visual Studio cache/options
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Visual Studio Trace Files
+*.e2e
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# TeamCity
+_TeamCity*
+
+# DotCover
+*.dotCover
+
+# AxoCover
+.axoCover/*
+!.axoCover/settings.json
+
+# Coverlet
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Visual Studio code coverage results
+*.coverage
+*.coveragexml
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# MightyMoose
+*.mm.*
+AutoTest.Net/
+
+# Web workbench (sass)
+.sass-cache/
+
+# Installshield output folder
+[Ee]xpress/
+
+# DocProject
+DocProject/buildhelp/
+DocProject/Help/*.HxT
+DocProject/Help/*.HxC
+DocProject/Help/*.hhc
+DocProject/Help/*.hhk
+DocProject/Help/*.hhp
+DocProject/Help/Html2
+DocProject/Help/html
+
+# Click-Once directory
+publish/
+
+# Publish Web Output
+*.[Pp]ublish.xml
+*.azurePubxml
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# NuGet Symbol Packages
+*.snupkg
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ============================================
+# IDE / Editors
+# ============================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# OS Specific
+# ============================================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================
+# Node.js (if ever used)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Temporary files
+# ============================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============================================
+# Archives (exclude if created)
+# ============================================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ============================================
+# Model files (too large for Git)
+# ============================================
+*.pth
+*.pt
+*.h5
+*.pb
+*.onnx
+*.tflite
+*.pkl
+*.pickle
+
+# ============================================
+# Large data files
+# ============================================
+*.csv
+*.json
+# Exception: keep small config files
+!config.json
+!package.json
+!appsettings.json
+
+# ============================================
+# Test files
+# ============================================
+test_images/
+test_data/
+*.test
+
+# ============================================
+# Documentation build
+# ============================================
+docs/_build/
+docs/.doctrees/
+
+# ============================================
+# Security / Secrets (CRITICAL)
+# ============================================
+*.key
+*.pem
+*.cert
+*.crt
+secrets/
+credentials/
+api_keys.txt
+
+# ============================================
+# Video / Media (exclude if in repo)
+# ============================================
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+
+# ============================================
+# Misc
+# ============================================
+*.pid
+*.seed
+*.pid.lock
+.cache/

@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - SortFlow{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .password-requirements {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 5px;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .password-requirements ul {
+        margin: 0.5rem 0 0 1.5rem;
+        color: #6c757d;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+    <h1 style="color: #667eea; text-align: center; margin-bottom: 2rem;">
+        ✨ Create an Account
+    </h1>
+    
+    <form method="POST" action="/auth/register">
+        <div class="form-group">
+            <label for="email" class="form-label">Email Address *</label>
+            <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                class="form-input" 
+                placeholder="your.email@example.com"
+                required
+            >
+        </div>
+        
+        <div class="form-group">
+            <label for="username" class="form-label">Username (optional)</label>
+            <input 
+                type="text" 
+                id="username" 
+                name="username" 
+                class="form-input" 
+                placeholder="John Doe"
+            >
+        </div>
+        
+        <div class="form-group">
+            <label for="password" class="form-label">Password *</label>
+            <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                class="form-input" 
+                placeholder="••••••••"
+                required
+            >
+            <div class="password-requirements">
+                <strong>Password requirements:</strong>
+                <ul>
+                    <li>At least 8 characters</li>
+                    <li>At least one uppercase letter</li>
+                    <li>At least one lowercase letter</li>
+                    <li>At least one number</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="password_confirm" class="form-label">Confirm Password *</label>
+            <input 
+                type="password" 
+                id="password_confirm" 
+                name="password_confirm" 
+                class="form-input" 
+                placeholder="••••••••"
+                required
+            >
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-block">
+                Create My Account
+            </button>
+        </div>
+    </form>
+    
+    <hr style="margin: 2rem 0; border: none; border-top: 1px solid #e0e0e0;">
+    
+    <p style="text-align: center; color: #6c757d;">
+        Already have an account?
+        <a href="/auth/login" style="color: #667eea; text-decoration: none; font-weight: 500;">
+            Sign in
+        </a>
+    </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Client-side validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password_confirm').value;
+        
+        if (password !== passwordConfirm) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+            return false;
+        }
+        
+        // Password strength validation
+        if (password.length < 8) {
+            e.preventDefault();
+            alert('Password must be at least 8 characters long');
+            return false;
+        }
+        
+        if (!/[A-Z]/.test(password)) {
+            e.preventDefault();
+            alert('Password must contain at least one uppercase letter');
+            return false;
+        }
+        
+        if (!/[a-z]/.test(password)) {
+            e.preventDefault();
+            alert('Password must contain at least one lowercase letter');
+            return false;
+        }
+        
+        if (!/[0-9]/.test(password)) {
+            e.preventDefault();
+            alert('Password must contain at least one number');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

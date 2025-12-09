@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}New Project - SortFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <h1 style="color: #667eea; margin-bottom: 2rem;">📂 New Project</h1>
+    
+    <div class="card">
+        <form id="projectForm">
+            <!-- Basic information -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                    Project name *
+                </label>
+                <input 
+                    type="text" 
+                    name="name" 
+                    id="projectName"
+                    required
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px;"
+                    placeholder="My classification project"
+                >
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                    Description
+                </label>
+                <textarea 
+                    name="description" 
+                    id="projectDescription"
+                    rows="3"
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px;"
+                    placeholder="Optional description..."
+                ></textarea>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                    Number of clusters *
+                </label>
+                <input 
+                    type="number" 
+                    name="n_clusters" 
+                    id="nClusters"
+                    value="20" 
+                    min="2" 
+                    max="50"
+                    required
+                    style="width: 150px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 5px;"
+                >
+                <small style="color: #6c757d; display: block; margin-top: 0.25rem;">
+                    Between 2 and 50
+                </small>
+            </div>
+            
+            <!-- Upload zone -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                    Images * (JPG, PNG max 10MB)
+                </label>
+                <div 
+                    id="dropZone"
+                    style="border: 2px dashed #667eea; border-radius: 10px; padding: 3rem; text-align: center; background: #f8f9fa; cursor: pointer; transition: all 0.3s;"
+                >
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+                    <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">
+                        Drag your images here or click to select
+                    </p>
+                    <p style="color: #6c757d; font-size: 0.9rem;">
+                        Accepted formats: JPG, PNG • Max size: 10MB per file
+                    </p>
+                    <input 
+                        type="file" 
+                        id="fileInput" 
+                        name="images" 
+                        multiple 
+                        accept="image/jpeg,image/jpg,image/png"
+                        style="display: none;"
+                    >
+                </div>
+                
+                <!-- File counter -->
+                <div id="fileCount" style="margin-top: 1rem; font-weight: 500; color: #667eea;">
+                    No files selected
+                </div>
+            </div>
+            
+            <!-- Progress bar -->
+            <div id="progressContainer" style="display: none; margin-bottom: 1.5rem;">
+                <div style="margin-bottom: 0.5rem;">
+                    <strong>Upload in progress...</strong>
+                    <span id="progressText">0 / 0</span>
+                </div>
+                <div style="width: 100%; background: #e9ecef; border-radius: 5px; height: 30px; overflow: hidden;">
+                    <div 
+                        id="progressBar" 
+                        style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;"
+                    >
+                        0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Buttons -->
+            <div style="display: flex; gap: 1rem;">
+                <button 
+                    type="submit" 
+                    class="btn"
+                    id="submitBtn"
+                >
+                    📤 Create Project
+                </button>
+                <a href="/projects" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+#dropZone:hover {
+    border-color: #764ba2;
+    background: #f0f0f8;
+}
+#dropZone.dragover {
+    border-color: #764ba2;
+    background: #e8e8f8;
+    transform: scale(1.02);
+}
+</style>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileCount = document.getElementById('fileCount');
+const form = document.getElementById('projectForm');
+const submitBtn = document.getElementById('submitBtn');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+
+let selectedFiles = [];
+
+// Click to select
+dropZone.addEventListener('click', () => fileInput.click());
+
+// Drag & Drop
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+    selectedFiles = Array.from(files);
+    updateFileCount();
+}
+
+function updateFileCount() {
+    const count = selectedFiles.length;
+    if (count === 0) {
+        fileCount.textContent = 'No files selected';
+        fileCount.style.color = '#6c757d';
+    } else {
+        const totalSize = (selectedFiles.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(1);
+        fileCount.textContent = `${count} file${count > 1 ? 's' : ''} selected (${totalSize} MB)`;
+        fileCount.style.color = '#667eea';
+    }
+}
+
+// Batch upload
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (selectedFiles.length === 0) {
+        alert('Please select at least one image');
+        return;
+    }
+    
+    const name = document.getElementById('projectName').value.trim();
+    const description = document.getElementById('projectDescription').value.trim();
+    const n_clusters = document.getElementById('nClusters').value;
+    
+    if (!name) {
+        alert('Project name is required');
+        return;
+    }
+    
+    // Disable form
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Upload in progress...';
+    progressContainer.style.display = 'block';
+    
+    try {
+        // 1. Create project
+        const createResponse = await fetch('/projects/create-empty', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, description, n_clusters: parseInt(n_clusters)})
+        });
+        
+        if (!createResponse.ok) {
+            throw new Error('Error creating project');
+        }
+        
+        const {project_id} = await createResponse.json();
+        
+        // 2. Upload in batches of 50 files
+        const BATCH_SIZE = 50;
+        const totalFiles = selectedFiles.length;
+        let uploadedCount = 0;
+        
+        for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
+            const batch = selectedFiles.slice(i, i + BATCH_SIZE);
+            const formData = new FormData();
+            
+            batch.forEach(file => formData.append('images', file));
+            
+            const uploadResponse = await fetch(`/projects/${project_id}/upload-batch`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!uploadResponse.ok) {
+                throw new Error(`Error uploading batch ${Math.floor(i / BATCH_SIZE) + 1}`);
+            }
+            
+            uploadedCount += batch.length;
+            
+            // Update progress
+            const percent = Math.round((uploadedCount / totalFiles) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            progressText.textContent = `${uploadedCount} / ${totalFiles}`;
+        }
+        
+        // 3. Finalize
+        const finalizeResponse = await fetch(`/projects/${project_id}/finalize-upload`, {
+            method: 'POST'
+        });
+        
+        if (!finalizeResponse.ok) {
+            throw new Error('Error finalizing');
+        }
+        
+        // Redirect
+        window.location.href = `/projects/${project_id}`;
+        
+    } catch (error) {
+        alert('Error: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📤 Create Project';
+        progressContainer.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}My Projects - SortFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: #667eea;">📂 My Projects</h1>
+        <a href="/projects/new" class="btn">
+            ➕ New Project
+        </a>
+    </div>
+    
+    {% if projects|length == 0 %}
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">📁</div>
+            <h2 style="color: #6c757d; margin-bottom: 1rem;">No projects yet</h2>
+            <p style="color: #6c757d; margin-bottom: 2rem;">
+                Create your first project to start organizing your images
+            </p>
+            <a href="/projects/new" class="btn" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                ➕ Create My First Project
+            </a>
+        </div>
+    {% else %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+            {% for project in projects %}
+                <div class="card" style="position: relative;">
+                    <!-- Status badge -->
+                    <div style="position: absolute; top: 1rem; right: 1rem;">
+                        {% if project.status == 'completed' %}
+                            <span style="background: #28a745; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem;">
+                                ✓ Completed
+                            </span>
+                        {% elif project.status == 'processing' %}
+                            <span style="background: #ffc107; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem;">
+                                ⏳ Processing
+                            </span>
+                        {% else %}
+                            <span style="background: #6c757d; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem;">
+                                📝 Created
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <h3 style="color: #667eea; margin-bottom: 0.5rem;">{{ project.name }}</h3>
+                    
+                    {% if project.description %}
+                        <p style="color: #6c757d; font-size: 0.875rem; margin-bottom: 1rem;">
+                            {{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}
+                        </p>
+                    {% endif %}
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.875rem;">
+                        <div>
+                            <strong>Images:</strong> {{ project.n_images }}
+                        </div>
+                        <div>
+                            <strong>Clusters:</strong> {{ project.n_clusters }}
+                        </div>
+                        <div>
+                            <strong>Size:</strong> {{ "%.1f"|format(project.total_size_mb) }} MB
+                        </div>
+                        <div>
+                            <strong>Created:</strong> {{ project.created_at.strftime('%m/%d/%Y') }}
+                        </div>
+                    </div>
+                    
+                    {% if project.mean_confidence %}
+                        <div style="background: #f8f9fa; padding: 0.75rem; border-radius: 5px; margin-bottom: 1rem;">
+                            <strong>Confidence:</strong> {{ "%.1f"|format(project.mean_confidence * 100) }}% | 
+                            <strong>Uncertain:</strong> {{ project.n_uncertain }}
+                        </div>
+                    {% endif %}
+                    
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="/projects/{{ project.id }}" class="btn" style="flex: 1;">
+                            👁️ View
+                        </a>
+                        <form method="POST" action="/projects/{{ project.id }}/delete" style="flex: 1;" 
+                              onsubmit="return confirm('Delete this project?');">
+                            <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

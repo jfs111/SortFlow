@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - SortFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto;">
+    <!-- Project header -->
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2rem;">
+        <div>
+            <a href="/projects" style="color: #667eea; text-decoration: none; margin-bottom: 0.5rem; display: inline-block;">
+                ← Back to Projects
+            </a>
+            <h1 style="color: #667eea; margin-bottom: 0.5rem;">{{ project.name }}</h1>
+            <p style="color: #6c757d; margin-bottom: 0.5rem;">
+                <strong>ID:</strong> <span style="font-family: monospace; background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">{{ project.id }}</span>
+            </p>
+            {% if project.description %}
+                <p style="color: #6c757d;">{{ project.description }}</p>
+            {% endif %}
+        </div>
+        
+        <div style="display: flex; gap: 1rem;">
+            {% if project.status == 'created' %}
+                <button class="btn" onclick="startProcessing(event)">
+                    🚀 Start Analysis
+                </button>
+            {% elif project.status == 'completed' %}
+                <a href="/projects/{{ project.id }}/cluster-overview" class="btn btn-info">
+                    📊 Cluster Overview
+                </a>
+                <a href="/projects/{{ project.id }}/validate" class="btn">
+                    🔍 Validate Clusters
+                </a>
+                <a href="{{ url_for('projects.name_clusters', project_id=project.id) }}" 
+                class="btn btn-info">
+                    📝 Name Clusters
+                </a>
+                <a href="{{ url_for('projects.merge_clusters_view', project_id=project.id) }}" 
+                class="btn btn-warning">
+                    🔀 Merge Clusters
+                </a>
+                <div class="btn-group me-2" role="group">
+                    <a href="{{ url_for('projects.export_csv', project_id=project.id) }}" 
+                    class="btn btn-success">
+                        📥 Export CSV
+                    </a>
+                    <a href="{{ url_for('projects.export_json', project_id=project.id) }}" 
+                    class="btn btn-success">
+                        📥 Export JSON
+                    </a>
+                </div>
+                <a href="{{ url_for('projects.finalize_project', project_id=project.id) }}" 
+                class="btn btn-primary">
+                    🎯 Finalize Project
+                </a>
+            {% endif %}
+            <form method="POST" action="/projects/{{ project.id }}/delete" style="display: inline;"
+                onsubmit="return confirm('Delete this project?');">
+                <button type="submit" class="btn btn-secondary">
+                    🗑️ Delete
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Project statistics -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Status</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                    {% if project.status == 'completed' %}
+                        ✅ Completed
+                    {% elif project.status == 'processing' %}
+                        ⏳ Processing
+                    {% else %}
+                        📝 Created
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Images</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                    {{ project.n_images }}
+                </div>
+            </div>
+            
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Clusters</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                    {{ project.n_clusters }}
+                </div>
+            </div>
+            
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Total Size</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                    {{ "%.1f"|format(project.total_size_mb) }} MB
+                </div>
+            </div>
+            
+            {% if project.mean_confidence %}
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Average Confidence</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #28a745;">
+                    {{ "%.1f"|format(project.mean_confidence * 100) }}%
+                </div>
+            </div>
+            
+            <div>
+                <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.25rem;">Uncertain Images</div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: #ffc107;">
+                    {{ project.n_uncertain }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Image gallery -->
+    <div class="card">
+        <h2 style="color: #667eea; margin-bottom: 1.5rem;">
+            🖼️ Images ({{ images|length }})
+        </h2>
+        
+        {% if images|length == 0 %}
+            <div style="text-align: center; padding: 3rem; color: #6c757d;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+                <p>No images in this project</p>
+            </div>
+        {% else %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                {% for image in images[:50] %}
+                    <div style="border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden; position: relative;">
+                        <img 
+                            src="/uploads/projects/{{ project.id }}/{{ image.filename }}" 
+                            alt="{{ image.original_filename }}"
+                            style="width: 100%; height: 150px; object-fit: cover;"
+                        >
+                        <div style="padding: 0.5rem; background: white;">
+                            <div style="font-size: 0.75rem; color: #6c757d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ image.original_filename }}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #6c757d;">
+                                {{ (image.file_size / 1024)|round(1) }} KB
+                            </div>
+                            {% if image.cluster_id is not none %}
+                                <div style="font-size: 0.75rem; margin-top: 0.25rem;">
+                                    <span style="background: #667eea; color: white; padding: 0.125rem 0.5rem; border-radius: 10px;">
+                                        Cluster {{ image.cluster_id }}
+                                    </span>
+                                    {% if image.confidence_score %}
+                                        <span style="color: #28a745; font-weight: bold;">
+                                            {{ "%.0f"|format(image.confidence_score * 100) }}%
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {% if images|length > 50 %}
+                <div style="text-align: center; margin-top: 2rem; color: #6c757d;">
+                    Showing first 50 images out of {{ images|length }}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+let progressInterval = null;
+let startTime = null;
+
+function startProcessing(event) {
+    const nImages = parseInt('{{ project.n_images }}');
+    
+    // Estimated time calculation (2 seconds per image)
+    const estimatedSeconds = Math.max(60, nImages * 0.05);
+    const estimatedMinutes = Math.floor(estimatedSeconds / 60);
+    const estimatedHours = Math.floor(estimatedMinutes / 60);
+    
+    let timeEstimate = '';
+    if (estimatedHours > 0) {
+        const remainingMin = estimatedMinutes % 60;
+        timeEstimate = estimatedHours + 'h ' + remainingMin + 'min';
+    } else if (estimatedMinutes > 0) {
+        timeEstimate = estimatedMinutes + 'min';
+    } else {
+        timeEstimate = estimatedSeconds + 's';
+    }
+    
+    // Confirmation with estimate
+    const confirmMsg = 'Start analyzing ' + nImages + ' images with {{ project.n_clusters }} clusters?\n\n' +
+                       'Estimated time: ' + timeEstimate + '\n\n' +
+                       'Processing will run in the background.';
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Starting...';
+    
+    // Start time
+    startTime = Date.now();
+    
+    // Time counter
+    progressInterval = setInterval(function() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        
+        const remaining = Math.max(0, estimatedSeconds - elapsed);
+        const remainingMin = Math.floor(remaining / 60);
+        
+        let display = '⏳ Processing... ';
+        if (minutes > 0) {
+            display += minutes + 'min ' + seconds + 's';
+        } else {
+            display += seconds + 's';
+        }
+        
+        if (remaining > 60) {
+            display += ' • ~' + remainingMin + 'min left';
+        }
+        
+        btn.innerHTML = display;
+    }, 1000);
+    
+    // API call
+    fetch('/projects/{{ project.id }}/process', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        
+        if (data.success) {
+            const actualTime = data.results.processing_time_seconds;
+            const actualMin = Math.floor(actualTime / 60);
+            const actualSec = Math.floor(actualTime % 60);
+            
+            let actualTimeText = actualMin > 0 ? actualMin + 'min ' + actualSec + 's' : actualSec + 's';
+            
+            alert('✅ Analysis complete!\n\n' +
+                  'Images: ' + data.results.n_images + '\n' +
+                  'Clusters: ' + data.results.n_clusters + '\n' +
+                  'Average confidence: ' + (data.results.mean_confidence * 100).toFixed(1) + '%\n' +
+                  'Uncertain images: ' + data.results.n_uncertain + '\n' +
+                  'Actual time: ' + actualTimeText);
+            location.reload();
+        } else {
+            alert('❌ Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '🚀 Start Analysis';
+        }
+    })
+    .catch(function(err) {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        console.error('Error:', err);
+        alert('❌ Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Start Analysis';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Cluster Preview - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Simplified header without button -->
+    <div class="mb-4">
+        <h2>📊 Cluster Preview</h2>
+        <p class="text-muted mb-0">
+            {{ project.name }} • {{ clusters|length }} clusters • 
+            {{ project.n_images }} images • 
+            Average confidence: {{ "%.1f"|format(project.mean_confidence * 100) }}%
+        </p>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <h5>👀 CHECK CLUSTER CONSISTENCY</h5>
+        <p class="mb-2">
+            Each cluster is represented by its <strong>central image</strong> 
+            (the image closest to the cluster centroid).
+        </p>
+        <p class="mb-0">
+            Check if the central images are consistent with what you expect. 
+            If multiple clusters seem similar or some are too heterogeneous, 
+            adjust the number of clusters below.
+        </p>
+    </div>
+
+    <!-- Quick statistics with back button -->
+    <div class="card bg-light border-primary mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📈 Quick Distribution Analysis</h5>
+            <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" 
+                class="btn btn-light btn-lg"
+                style="margin: 0.5rem 0 0.5rem 1rem; padding: 0.75rem 1.5rem;">
+                ← Back to Project
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">📏</div>
+                        <div class="stat-label">Average Size</div>
+                        <div class="stat-value">{{ "%.0f"|format(stats.avg_cluster_size) }}</div>
+                        <div class="stat-unit">images/cluster</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card {% if stats.small_clusters > clusters|length / 3 %}stat-warning{% endif %}">
+                        <div class="stat-icon">🔍</div>
+                        <div class="stat-label">Small Clusters</div>
+                        <div class="stat-value">{{ stats.small_clusters }}</div>
+                        <div class="stat-unit">< 50 images</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card {% if stats.large_clusters > 0 %}stat-warning{% endif %}">
+                        <div class="stat-icon">📦</div>
+                        <div class="stat-label">Large Clusters</div>
+                        <div class="stat-value">{{ stats.large_clusters }}</div>
+                        <div class="stat-unit">> 1000 images</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card {% if stats.low_confidence_clusters > 0 %}stat-danger{% endif %}">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-label">Low Confidence</div>
+                        <div class="stat-value">{{ stats.low_confidence_clusters }}</div>
+                        <div class="stat-unit">< 50%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visual separator -->
+    <div class="text-center my-4">
+        <hr style="border-top: 3px solid #667eea; width: 50%; margin: 0 auto;">
+        <p class="text-muted mt-2 mb-0">
+            <strong>↓ Representative images from each cluster ↓</strong>
+        </p>
+    </div>
+
+    <!-- Cluster grid -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Cluster Central Images</h5>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
+                {% for cluster_id, cluster in clusters.items() %}
+                <div>
+                    <div class="card h-100 cluster-preview-card">
+                        <!-- Cluster badge -->
+                        <div class="position-absolute top-0 start-0 m-2" style="z-index: 10;">
+                            <span class="badge bg-primary" style="font-size: 0.8rem;">Cluster {{ cluster_id }}</span>
+                        </div>
+                        
+                        <!-- Central image -->
+                        <div class="cluster-image-wrapper">
+                            {% if cluster.central_image %}
+                                <img src="/{{ cluster.central_image.file_path }}" 
+                                     class="card-img-top" 
+                                     alt="Cluster {{ cluster_id }}"
+                                     loading="lazy">
+                            {% else %}
+                                <div class="no-image">
+                                    <span>❌</span>
+                                    <small>Empty</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Statistics -->
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold" style="font-size: 0.9rem;">{{ cluster.n_images }} imgs</span>
+                                <span class="badge {% if cluster.mean_confidence < 0.3 %}bg-danger{% elif cluster.mean_confidence < 0.5 %}bg-warning text-dark{% else %}bg-success{% endif %}" 
+                                      style="font-size: 0.75rem;">
+                                    {{ "%.0f"|format(cluster.mean_confidence * 100) }}%
+                                </span>
+                            </div>
+                            {% if cluster.n_uncertain > 0 %}
+                                <small class="text-warning" style="font-size: 0.75rem;">
+                                    ⚠️ {{ cluster.n_uncertain }} uncertain
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Interpretation -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">💡 How to Interpret?</h5>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="interpretation-box good">
+                        <h6>✅ Consistent Clusters</h6>
+                        <ul class="small mb-0">
+                            <li>Central images match content</li>
+                            <li>High confidence (> 70%)</li>
+                            <li>Balanced sizes</li>
+                        </ul>
+                        <p class="mt-2 mb-0 fw-bold small text-success">
+                            → Ideal configuration, proceed to validation!
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="interpretation-box warning">
+                        <h6>⚠️ Too Many Clusters</h6>
+                        <ul class="small mb-0">
+                            <li>Many small clusters (< 50 images)</li>
+                            <li>Similar images in multiple clusters</li>
+                            <li>Over-segmentation</li>
+                        </ul>
+                        <p class="mt-2 mb-0 fw-bold small text-warning">
+                            → Reduce number of clusters (e.g., {{ clusters|length // 2 }})
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="interpretation-box danger">
+                        <h6>⚠️ Not Enough Clusters</h6>
+                        <ul class="small mb-0">
+                            <li>Very large clusters (> 1000 images)</li>
+                            <li>Different images together</li>
+                            <li>Low confidence (< 50%)</li>
+                        </ul>
+                        <p class="mt-2 mb-0 fw-bold small text-danger">
+                            → Increase number of clusters (e.g., {{ clusters|length * 2 }})
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjustment -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">🔧 Adjust Number of Clusters?</h5>
+            
+            <div class="row align-items-end">
+                <div class="col-md-6">
+                    <label for="newNClusters" class="form-label">
+                        Current number of clusters: <strong>{{ project.n_clusters }}</strong>
+                    </label>
+                    <input type="number" 
+                           class="form-control form-control-lg" 
+                           id="newNClusters" 
+                           min="2" 
+                           max="50" 
+                           value="{{ project.n_clusters }}"
+                           placeholder="New number of clusters">
+                    <small class="form-text text-muted">Between 2 and 50</small>
+                </div>
+                
+                <div class="col-md-6">
+                    <button class="btn btn-warning btn-lg w-100" 
+                            onclick="reprocessClusters()"
+                            id="reprocessBtn">
+                        🔄 Restart with New Clusters
+                    </button>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning mt-3 mb-0">
+                <strong>⚠️ Warning:</strong> Reprocessing will take a few minutes and will reset 
+                all previous validations.
+            </div>
+        </div>
+    </div>
+
+    <!-- Continue button -->
+    <div class="text-center mb-4">
+        <div class="mb-3">
+            <strong>OR</strong>
+        </div>
+        <a href="{{ url_for('projects.validate_clusters', project_id=project.id) }}" 
+           class="btn btn-success btn-lg">
+            ✓ Clusters look good, continue validation
+        </a>
+    </div>
+</div>
+
+<style>
+/* Distinctive statistics - Compact version */
+.stat-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-card.stat-warning {
+    background: #fff8e1;
+    border-color: #ffc107;
+}
+
+.stat-card.stat-danger {
+    background: #ffebee;
+    border-color: #dc3545;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #667eea;
+    line-height: 1;
+}
+
+.stat-card.stat-warning .stat-value {
+    color: #f57c00;
+}
+
+.stat-card.stat-danger .stat-value {
+    color: #d32f2f;
+}
+
+.stat-unit {
+    font-size: 0.688rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Clusters preview */
+.cluster-preview-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cluster-preview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.cluster-image-wrapper {
+    height: 150px;
+    overflow: hidden;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.cluster-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.no-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6c757d;
+}
+
+.no-image span {
+    font-size: 2rem;
+}
+
+.interpretation-box {
+    padding: 1rem;
+    border-radius: 8px;
+    border: 2px solid;
+    height: 100%;
+}
+
+.interpretation-box.good {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.interpretation-box.warning {
+    background: #fff3cd;
+    border-color: #ffc107;
+}
+
+.interpretation-box.danger {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+.interpretation-box h6 {
+    margin-bottom: 0.5rem;
+}
+
+.interpretation-box ul {
+    padding-left: 1.2rem;
+}
+
+.btn-light.btn-lg {
+    margin: 0.5rem 0 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
+}
+</style>
+
+<script>
+function reprocessClusters() {
+    const newNClusters = parseInt(document.getElementById('newNClusters').value);
+    const currentNClusters = {{ project.n_clusters }};
+    
+    if (!newNClusters || newNClusters < 2 || newNClusters > 50) {
+        alert('Number of clusters must be between 2 and 50');
+        return;
+    }
+    
+    if (newNClusters === currentNClusters) {
+        alert('Please choose a different number than ' + currentNClusters);
+        return;
+    }
+    
+    const estimatedTime = Math.max(60, {{ project.n_images }} * 0.03);
+    const estimatedMin = Math.floor(estimatedTime / 60);
+    
+    const confirmMsg = 'Restart clustering with ' + newNClusters + ' clusters?\n\n' +
+                       'Estimated time: ' + (estimatedMin > 0 ? estimatedMin + ' min' : estimatedTime + ' s') + '\n\n' +
+                       '⚠️ WARNING: All previous validations will be lost.';
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    const btn = document.getElementById('reprocessBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Reprocessing...';
+    
+    fetch('/projects/{{ project.id }}/reprocess', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({n_clusters: newNClusters})
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            alert('✅ ' + data.message + '\n\nThe page will reload.');
+            location.reload();
+        } else {
+            alert('❌ Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Restart with New Clusters';
+        }
+    })
+    .catch(function(err) {
+        console.error('Error:', err);
+        alert('❌ Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Restart with New Clusters';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}My API Keys{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2>🔑 My API Keys</h2>
+        <p class="text-muted">Manage your prediction API access keys</p>
+    </div>
+
+    <!-- Create new key button -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">➕ Create a New API Key</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('projects.create_api_key') }}">
+                <div class="row align-items-end">
+                    <div class="col-md-8">
+                        <label for="keyName" class="form-label">Key Name</label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="keyName" 
+                               name="name"
+                               placeholder="e.g., Production API, Mobile App, etc."
+                               required
+                               maxlength="200">
+                        <small class="form-text text-muted">
+                            Provide a descriptive name to identify the purpose of this key
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            ✓ Create Key
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- API Documentation -->
+    <div class="alert alert-info mb-4">
+        <h5>📖 API Usage</h5>
+        <p class="mb-2">Once your key is created, use it in your HTTP requests:</p>
+        <pre class="bg-dark text-light p-3 rounded mb-2"><code>POST /api/v1/projects/{project_id}/predict
+Header: X-API-Key: your_api_key
+
+Body (JSON):
+{
+  "image_base64": "base64_encoded_image_data"
+}
+
+OR
+
+Body (multipart/form-data):
+  file: image_file</code></pre>
+        <p class="mb-0"><strong>Full Documentation:</strong> <a href="#" class="text-primary">View API Documentation</a></p>
+    </div>
+
+    <!-- Keys List -->
+    {% if keys %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Your API Keys ({{ keys|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Key</th>
+                            <th>Status</th>
+                            <th>Created On</th>
+                            <th>Last Used</th>
+                            <th>Requests</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in keys %}
+                        <tr>
+                            <td>
+                                <strong>{{ key.name }}</strong>
+                            </td>
+                            <td>
+                                <div class="input-group" style="max-width: 400px;">
+                                    <input type="text" 
+                                           class="form-control font-monospace" 
+                                           id="key_{{ key.id }}"
+                                           value="{{ key.key }}" 
+                                           readonly
+                                           style="font-size: 0.85rem;">
+                                    <button class="btn btn-outline-secondary" 
+                                            type="button" 
+                                            onclick="copyKey('{{ key.key }}', {{ key.id }}, event)">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                {% if key.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ key.created_at.strftime('%m/%d/%Y %I:%M %p') if key.created_at else '-' }}</small>
+                            </td>
+                            <td>
+                                <small>
+                                    {% if key.last_used_at %}
+                                        {{ key.last_used_at.strftime('%m/%d/%Y %I:%M %p') }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ key.total_requests }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <!-- Toggle Active/Inactive -->
+                                    <form method="POST" 
+                                          action="{{ url_for('projects.toggle_api_key', key_id=key.id) }}" 
+                                          style="display: inline;">
+                                        <button type="submit" 
+                                                class="btn btn-sm btn-outline-{% if key.is_active %}warning{% else %}success{% endif %}"
+                                                title="{% if key.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                            {% if key.is_active %}⏸️{% else %}▶️{% endif %}
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- Delete -->
+                                    <form method="POST" 
+                                          action="{{ url_for('projects.delete_api_key', key_id=key.id) }}" 
+                                          style="display: inline;"
+                                          onsubmit="return confirm('⚠️ Delete this API key?\n\nApplications using this key will no longer be able to access the API.');">
+                                        <button type="submit" 
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Delete">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <h5>No API Keys</h5>
+        <p class="mb-0">Create your first API key to start using the prediction API.</p>
+    </div>
+    {% endif %}
+
+    <!-- Back -->
+    <div class="text-center mt-4 mb-4">
+        <a href="{{ url_for('projects.list_projects') }}" class="btn btn-secondary">
+            ← Back to Projects
+        </a>
+    </div>
+</div>
+
+<script>
+function copyKey(key, keyId, event) {
+    event.preventDefault();
+    
+    navigator.clipboard.writeText(key).then(function() {
+        // Visual feedback
+        var btn = event.currentTarget;
+        var originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        alert('❌ Copy error: ' + err);
+    });
+}
+</script>
+
+<style>
+.font-monospace {
+    font-family: 'Courier New', monospace;
+}
+
+.table td {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

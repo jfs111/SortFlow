@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Merge Clusters - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2>🔀 Merge Clusters</h2>
+        <p class="text-muted mb-0">
+            {{ project.name }} • {{ clusters|length }} clusters available
+        </p>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <h5>💡 How to merge clusters?</h5>
+        <ul class="mb-0">
+            <li>Check <strong>2 or more clusters</strong> that contain similar images</li>
+            <li>Provide a <strong>new name</strong> for the merged cluster</li>
+            <li>Click on <strong>"🔀 Merge Selected Clusters"</strong></li>
+        </ul>
+        <p class="mt-2 mb-0">
+            <strong>⚠️ Important:</strong> Images will be moved to the cluster with the smallest ID.
+        </p>
+    </div>
+
+    <!-- Selection counter -->
+    <div class="card bg-light mb-4" id="selectionSummary" style="display: none;">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">
+                        <span id="selectedCount">0</span> cluster(s) selected
+                    </h5>
+                    <small class="text-muted" id="totalImages">0 images total</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-outline-secondary" onclick="deselectAll()">
+                        ☐ Deselect All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cluster grid -->
+    <div class="row g-3 mb-4">
+        {% for cluster_id, cluster in clusters.items() %}
+        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="card h-100 cluster-merge-card" 
+                 data-cluster-id="{{ cluster_id }}"
+                 data-n-images="{{ cluster.n_images }}"
+                 onclick="toggleClusterSelection({{ cluster_id }})">
+                
+                <!-- Checkbox -->
+                <div class="cluster-checkbox">
+                    <input type="checkbox" 
+                           class="form-check-input cluster-checkbox-input" 
+                           id="cluster_{{ cluster_id }}"
+                           onclick="event.stopPropagation();"
+                           onchange="toggleClusterSelection({{ cluster_id }})">
+                </div>
+                
+                <!-- Central image -->
+                <div class="cluster-merge-image-wrapper">
+                    {% if cluster.central_image %}
+                        <img src="/{{ cluster.central_image.file_path }}" 
+                             class="card-img-top" 
+                             alt="Cluster {{ cluster_id }}">
+                    {% else %}
+                        <div class="no-image">
+                            <span>❌</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Information -->
+                <div class="card-body p-2">
+                    <h6 class="card-title mb-1" style="font-size: 0.9rem;">
+                        {{ cluster.cluster_name }}
+                    </h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">{{ cluster.n_images }} imgs</small>
+                        <span class="badge {% if cluster.mean_confidence < 0.5 %}bg-warning text-dark{% else %}bg-success{% endif %}" 
+                              style="font-size: 0.7rem;">
+                            {{ "%.0f"|format(cluster.mean_confidence * 100) }}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Merge form -->
+    <div class="card border-primary mb-4" id="mergeForm" style="display: none;">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">🔀 Merge Settings</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="mergedClusterName" class="form-label fw-bold">
+                    Merged cluster name
+                </label>
+                <input type="text" 
+                       class="form-control form-control-lg" 
+                       id="mergedClusterName"
+                       placeholder="e.g., Airplanes (all types)"
+                       maxlength="200">
+                <small class="form-text text-muted">
+                    This name will replace the destination cluster's name
+                </small>
+            </div>
+            
+            <div class="alert alert-warning">
+                <strong>⚠️ Warning:</strong> Images will be moved to 
+                <strong>Cluster <span id="targetClusterId"></span></strong> (smallest ID).
+                This action is irreversible.
+            </div>
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="text-center mb-4">
+        <a href="{{ url_for('projects.project_detail', project_id=project.id) }}" 
+           class="btn btn-secondary btn-lg me-3">
+            ← Back to Project
+        </a>
+        <button type="button" 
+                class="btn btn-warning btn-lg" 
+                id="mergeButton"
+                style="display: none;"
+                onclick="mergeClusters({{ project.id }})">
+            🔀 Merge Selected Clusters
+        </button>
+    </div>
+</div>
+
+<style>
+.cluster-merge-card {
+    border: 3px solid #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.cluster-merge-card:hover {
+    border-color: #667eea;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.cluster-merge-card.selected {
+    border-color: #ffc107;
+    background-color: #fff8e1;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
+
+.cluster-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+}
+
+.cluster-checkbox-input {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.cluster-merge-image-wrapper {
+    height: 150px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.cluster-merge-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.no-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6c757d;
+}
+
+.no-image span {
+    font-size: 2.5rem;
+}
+</style>
+
+<script>
+var selectedClusters = [];
+
+function toggleClusterSelection(clusterId) {
+    var card = document.querySelector('.cluster-merge-card[data-cluster-id="' + clusterId + '"]');
+    var checkbox = document.getElementById('cluster_' + clusterId);
+    
+    // Toggle
+    var index = selectedClusters.indexOf(clusterId);
+    if (index > -1) {
+        selectedClusters.splice(index, 1);
+        card.classList.remove('selected');
+        checkbox.checked = false;
+    } else {
+        selectedClusters.push(clusterId);
+        card.classList.add('selected');
+        checkbox.checked = true;
+    }
+    
+    updateSelectionUI();
+}
+
+function deselectAll() {
+    selectedClusters = [];
+    document.querySelectorAll('.cluster-merge-card').forEach(function(card) {
+        card.classList.remove('selected');
+    });
+    document.querySelectorAll('.cluster-checkbox-input').forEach(function(checkbox) {
+        checkbox.checked = false;
+    });
+    updateSelectionUI();
+}
+
+function updateSelectionUI() {
+    var count = selectedClusters.length;
+    
+    // Show/hide summary
+    document.getElementById('selectionSummary').style.display = count > 0 ? 'block' : 'none';
+    document.getElementById('selectedCount').textContent = count;
+    
+    // Calculate total images
+    var totalImages = 0;
+    selectedClusters.forEach(function(clusterId) {
+        var card = document.querySelector('.cluster-merge-card[data-cluster-id="' + clusterId + '"]');
+        totalImages += parseInt(card.getAttribute('data-n-images'));
+    });
+    document.getElementById('totalImages').textContent = totalImages + ' images total';
+    
+    // Show/hide form and button
+    if (count >= 2) {
+        document.getElementById('mergeForm').style.display = 'block';
+        document.getElementById('mergeButton').style.display = 'inline-block';
+        
+        // Show target cluster ID (smallest)
+        var targetId = Math.min.apply(null, selectedClusters);
+        document.getElementById('targetClusterId').textContent = targetId;
+    } else {
+        document.getElementById('mergeForm').style.display = 'none';
+        document.getElementById('mergeButton').style.display = 'none';
+    }
+}
+
+function mergeClusters(projectId) {
+    if (selectedClusters.length < 2) {
+        alert('❌ Please select at least 2 clusters');
+        return;
+    }
+    
+    var newName = document.getElementById('mergedClusterName').value.trim();
+    
+    if (!newName) {
+        alert('❌ Please provide a name for the merged cluster');
+        return;
+    }
+    
+    var targetId = Math.min.apply(null, selectedClusters);
+    var message = 'Merge ' + selectedClusters.length + ' clusters into one?\n\n';
+    message += 'Destination cluster: Cluster ' + targetId + '\n';
+    message += 'New name: ' + newName + '\n\n';
+    message += '⚠️ This action is irreversible!';
+    
+    if (!confirm(message)) {
+        return;
+    }
+    
+    var btn = document.getElementById('mergeButton');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Merging...';
+    
+    fetch('/projects/' + projectId + '/clusters/merge', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            cluster_ids: selectedClusters,
+            new_name: newName
+        })
+    })
+    .then(function(res) {
+        return res.json();
+    })
+    .then(function(data) {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            window.location.reload();
+        } else {
+            alert('❌ Error: ' + data.error);
+            btn.disabled = false;
+            btn.innerHTML = '🔀 Merge Selected Clusters';
+        }
+    })
+    .catch(function(err) {
+        console.error('Error:', err);
+        alert('❌ Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '🔀 Merge Selected Clusters';
+    });
+}
+</script>
+{% endblock %}
