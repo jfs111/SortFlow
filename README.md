@@ -332,7 +332,7 @@ Copyright (c) 2025 Jean-François SWISTAK
 
 - **Author**: Jean-François SWISTAK
 - **CS50 Username**: J-F-S
-- **GitHub**: jfs-111
+- **GitHub**: jfs111
 - **Email**: jf_swistak@yahoo.fr
 
 ---
